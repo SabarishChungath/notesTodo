@@ -7,10 +7,12 @@ import 'package:notes_app/models/note.dart';
 part 'notes_event.dart';
 part 'notes_state.dart';
 
-const reviewDuration = Duration(minutes: 1);
-
 class NotesBloc extends Bloc<NotesEvent, NotesState> {
   NotesBloc() : super(NotesInitial()) {
+    on<InitNotes>((event, emit) {
+      this.initNotes(event, emit);
+    });
+
     on<SaveNotes>((event, emit) {
       this.saveNotes(event, emit);
     });
@@ -18,6 +20,21 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
     on<RemindForReview>((event, emit) async {
       await this.remindForReview(event, emit);
     });
+
+    on<ChangeInterval>((event, emit) {
+      this.changeInterval(event, emit);
+    });
+  }
+
+  void initNotes(InitNotes event, Emitter<NotesState> emit) {
+    emit(const NotesFinal(intervals: [5, 10, 15], notes: []));
+  }
+
+  void changeInterval(ChangeInterval event, Emitter<NotesState> emit) {
+    if (state is NotesFinal) {
+      var prevState = state as NotesFinal;
+      emit(prevState.copyWith(selectedInterval: event.interval));
+    }
   }
 
   void saveNotes(SaveNotes event, Emitter<NotesState> emit) {
@@ -34,14 +51,17 @@ class NotesBloc extends Bloc<NotesEvent, NotesState> {
 
   Future<void> remindForReview(
       RemindForReview event, Emitter<NotesState> emit) async {
-    await Future.delayed(reviewDuration, () {
+    await Future.delayed(Duration(minutes: event.note.reviewDuration), () {
       if (state is NotesFinal) {
         var prevState = state as NotesFinal;
         List<Note> notes = List<Note>.from(prevState.notes);
-        int index = notes.indexWhere((element) => element == event.note);
+        int index = notes.indexWhere((element) => element.id == event.note.id);
         if (index != -1) {
-          notes[index] = event.note.copyWith(showReview: true);
-          emit(NotesFinal(notes: notes));
+          var updatedNote =
+              event.note.copyWith(reviewCount: event.note.reviewCount + 1);
+          notes[index] = updatedNote;
+          emit(prevState.copyWith(notes: notes));
+          add(RemindForReview(note: updatedNote));
         } else {
           emit(NotesFinal(notes: [event.note]));
         }

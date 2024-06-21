@@ -7,6 +7,8 @@ sealed class NotesEvent extends Equatable {
   List<Object> get props => [];
 }
 
+class InitNotes extends NotesEvent {}
+
 class SaveNotes extends NotesEvent {
   final Note note;
 
@@ -17,4 +19,10 @@ class RemindForReview extends NotesEvent {
   final Note note;
 
   const RemindForReview({required this.note});
+}
+
+class ChangeInterval extends NotesEvent {
+  final int interval;
+
+  const ChangeInterval({required this.interval});
 }
